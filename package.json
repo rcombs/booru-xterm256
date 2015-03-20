@@ -1,0 +1,29 @@
+{
+  "name": "booru-xterm256",
+  "version": "1.0.0",
+  "description": "View images from boorus in your terminal",
+  "bin": {
+    "booru": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rcombs/booru-xterm256.git"
+  },
+  "author": "Rodger Combs",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rcombs/booru-xterm256/issues"
+  },
+  "homepage": "https://github.com/rcombs/booru-xterm256",
+  "dependencies": {
+    "keypress": "^0.2.1",
+    "openurl": "^1.1.0",
+    "progress": "^1.1.8",
+    "request": "^2.53.0",
+    "xml2js": "^0.4.6",
+    "yargs": "^3.5.4"
+  }
+}
