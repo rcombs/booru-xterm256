@@ -13,6 +13,7 @@ var apis = {
   gelbooru: 'http://gelbooru.com/index.php?page=dapi&s=post&q=index&pid=PAGE',
   danbooru: 'http://danbooru.donmai.us/post/index.xml?page=PAGE',
   sankakuchan: 'https://chan.sankakucomplex.com/post/index.xml?page=PAGE',
+  idol: 'https://idol.sankakucomplex.com/post/index.xml?page=PAGE',
   behoimi: 'http://behoimi.org/post/index.xml?page=PAGE'
 }
 
@@ -22,6 +23,7 @@ var tags = argv.tags;
 
 var list = [];
 var index = 0;
+var count = Infinity;
 var pageSize = argv.pageSize ? parseInt(argv.pageSize, 10) : 50;
 
 var img2args = argv.img2args ? argv.img2args.split(' ') : ['-yw', '2'];
@@ -42,11 +44,17 @@ function killChildren() {
     img2.kill('SIGKILL');
     magick.kill('SIGKILL');
     imgReq.abort();
+    return true;
   }
 }
 
 function displayImage(item) {
-  killChildren();
+  if (killChildren()) {
+    magick.on('exit', function () {
+      displayImage(item);
+    });
+    return false;
+  }
 
   displaying = true;
 
@@ -73,19 +81,25 @@ function displayImage(item) {
     '-'
   ], {stdio: ['pipe', 'pipe', 'ignore']});
   img2 = child_process.spawn('img2xterm', img2args, {
-    stdio: ['pipe', 'inherit', 'inherit']
+    stdio: ['pipe', 'pipe', 'ignore']
+  });
+  imgReq.on('error', function(err) {
+    console.error(err);
   });
   imgReq.on('response', function(res) {
-    var bar = new ProgressBar(':bar', {
-      total: parseInt(res.headers['content-length'], 10),
-      width: process.stdout.columns - 2
-    });
+    var bar;
+    if (res.headers['content-length'])
+      bar = new ProgressBar(':bar', {
+        total: parseInt(res.headers['content-length'], 10),
+        width: process.stdout.columns - 2
+      });
     function gotChunk(chunk) {
-      bar.tick(chunk.length);
+      if (bar)
+        bar.tick(chunk.length);
       magick.stdin.write(chunk);
     }
     imgReq.on('data', gotChunk);
-    function gotEnd(){
+    function gotEnd() {
       reset();
       magick.stdin.end();
     }
@@ -93,9 +107,13 @@ function displayImage(item) {
     magick.on('exit', function() {
       imgReq.removeListener('data', gotChunk);
       imgReq.removeListener('end', gotEnd);
+      img2.stdin.end();
     });
   });
   magick.stdout.pipe(img2.stdin);
+  img2.stdout.on('data', function (chunk) {
+    process.stdout.write(chunk);
+  });
   img2.on('exit', function (code) {
     magick.stdout.unpipe(img2.stdin);
     displaying = false;
@@ -110,9 +128,14 @@ function displayCurrent(offset) {
   if (!offset)
     offset = 0;
 
+
   index += offset;
   if (index < 0)
     index = 0;
+
+  if (index >= count)
+    index = count - 1;
+
   if (index >= list.length) {
     return requestList();
   }
@@ -157,7 +180,16 @@ function requestList() {
     url += '&tags=' + tags;
   var offset = page * pageSize;
   request(url, function (err, res, body) {
+    if (!body) {
+      console.error(err, res);
+      return;
+    }
     parseString(body, function (err, result) {
+      if (!result || !result.posts || !result.posts.post || !result.posts.post.length) {
+        console.error(result, err);
+        return;
+      }
+      count = result.posts.$.count;
       for (var i = 0; i < result.posts.post.length; i++) {
         list[offset + i] = parsePost(result.posts.post[i].$);
       }
@@ -175,8 +207,9 @@ keypress(process.stdin);
 process.stdin.on('keypress', function (ch, key) {
   if (!key)
     return;
+
   if (key.ctrl && key.name == 'c') {
-    process.stdin.pause();
+    process.exit(0);
   } else if (key.name == 'right') {
     displayCurrent(1);
   } else if (key.name == 'left') {

@@ -20,10 +20,10 @@
   "homepage": "https://github.com/rcombs/booru-xterm256",
   "dependencies": {
     "keypress": "^0.2.1",
-    "openurl": "^1.1.0",
-    "progress": "^1.1.8",
-    "request": "^2.53.0",
-    "xml2js": "^0.4.6",
-    "yargs": "^3.5.4"
+    "openurl": "^1.1.1",
+    "progress": "^2.0.3",
+    "request": "^2.88.2",
+    "xml2js": "^0.4.23",
+    "yargs": "^15.3.1"
   }
 }
